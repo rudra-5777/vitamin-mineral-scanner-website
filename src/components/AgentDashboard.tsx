@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Play, Plus, Check } from 'lucide-react'
 
 type TabKey = 'models' | 'add-fruit' | 'add-disease' | 'test'
@@ -232,9 +232,18 @@ function AddDiseaseTab() {
 
 /* ─── Test Prediction Tab ─── */
 function TestPredictionTab() {
-  const [model, setModel] = useState(modelOptions[0])
-  const [ran, setRan] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const [model, setModel]       = useState(modelOptions[0])
+  const [ran, setRan]           = useState(false)
+  const [loading, setLoading]   = useState(false)
+  const [imageUrl, setImageUrl] = useState<string | null>(null)
+  const fileRef                 = useRef<HTMLInputElement>(null)
+
+  function handleFile(file: File) {
+    if (!file.type.startsWith('image/')) return
+    if (imageUrl) URL.revokeObjectURL(imageUrl)
+    setImageUrl(URL.createObjectURL(file))
+    setRan(false)
+  }
 
   function handleRun() {
     setLoading(true)
@@ -244,10 +253,31 @@ function TestPredictionTab() {
 
   return (
     <div className="max-w-xl space-y-5">
-      {/* Upload placeholder */}
-      <div className="border-2 border-dashed border-gray-300 rounded-2xl bg-gray-50 h-40 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-green-400 transition-colors">
-        <span className="text-4xl">📸</span>
-        <p className="text-sm text-gray-500">Click to upload or drag image here</p>
+      {/* Hidden file input */}
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = '' }}
+      />
+
+      {/* Upload / preview box */}
+      <div
+        onClick={() => fileRef.current?.click()}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) handleFile(f) }}
+        className={`relative border-2 border-dashed rounded-2xl h-40 flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors overflow-hidden
+          ${imageUrl ? 'border-green-400 bg-gray-900' : 'border-gray-300 bg-gray-50 hover:border-green-400'}`}
+      >
+        {imageUrl ? (
+          <img src={imageUrl} alt="Uploaded" className="absolute inset-0 w-full h-full object-cover opacity-80" />
+        ) : (
+          <>
+            <span className="text-4xl">📸</span>
+            <p className="text-sm text-gray-500">Click to upload or drag image here</p>
+          </>
+        )}
       </div>
 
       <div>

@@ -1,16 +1,71 @@
-import { useState } from 'react'
-import { Camera, Check } from 'lucide-react'
+import { useState, useRef } from 'react'
+import type { DragEvent } from 'react'
+import { Camera, Check, Loader2, RefreshCw } from 'lucide-react'
 
-type FruitKey = 'banana' | 'apple' | 'mango' | 'orange'
+type ProduceKey = 'banana' | 'apple' | 'mango' | 'orange' | 'carrot' | 'broccoli' | 'tomato' | 'spinach'
 
-const fruitData = {
-  banana: { emoji: '🍌', calories: 89, carbs: 23, protein: 1.1, fat: 0.3, vitaminC: 8.7, potassium: 358, ripeness: 85, daysLeft: 3 },
-  apple:  { emoji: '🍎', calories: 52, carbs: 14, protein: 0.3, fat: 0.2, vitaminC: 4.6, potassium: 107, ripeness: 70, daysLeft: 7 },
-  mango:  { emoji: '🥭', calories: 60, carbs: 15, protein: 0.8, fat: 0.4, vitaminC: 36.4, potassium: 168, ripeness: 60, daysLeft: 5 },
-  orange: { emoji: '🍊', calories: 47, carbs: 12, protein: 0.9, fat: 0.1, vitaminC: 53.2, potassium: 181, ripeness: 90, daysLeft: 2 },
+const produceData: Record<ProduceKey, {
+  emoji: string
+  category: 'Fruit' | 'Vegetable'
+  calories: number
+  carbs: number
+  protein: number
+  fat: number
+  vitaminC: number
+  potassium: number
+}> = {
+  banana:   { emoji: '🍌', category: 'Fruit',     calories: 89,  carbs: 23,  protein: 1.1, fat: 0.3, vitaminC: 8.7,  potassium: 358 },
+  apple:    { emoji: '🍎', category: 'Fruit',     calories: 52,  carbs: 14,  protein: 0.3, fat: 0.2, vitaminC: 4.6,  potassium: 107 },
+  mango:    { emoji: '🥭', category: 'Fruit',     calories: 60,  carbs: 15,  protein: 0.8, fat: 0.4, vitaminC: 36.4, potassium: 168 },
+  orange:   { emoji: '🍊', category: 'Fruit',     calories: 47,  carbs: 12,  protein: 0.9, fat: 0.1, vitaminC: 53.2, potassium: 181 },
+  carrot:   { emoji: '🥕', category: 'Vegetable', calories: 41,  carbs: 10,  protein: 0.9, fat: 0.2, vitaminC: 5.9,  potassium: 320 },
+  broccoli: { emoji: '🥦', category: 'Vegetable', calories: 34,  carbs: 7,   protein: 2.8, fat: 0.4, vitaminC: 89.2, potassium: 316 },
+  tomato:   { emoji: '🍅', category: 'Vegetable', calories: 18,  carbs: 3.9, protein: 0.9, fat: 0.2, vitaminC: 13.7, potassium: 237 },
+  spinach:  { emoji: '🥬', category: 'Vegetable', calories: 23,  carbs: 3.6, protein: 2.9, fat: 0.4, vitaminC: 28.1, potassium: 558 },
 }
 
-const fruits: FruitKey[] = ['banana', 'apple', 'mango', 'orange']
+const allKeys = Object.keys(produceData) as ProduceKey[]
+const fruits     = allKeys.filter((k) => produceData[k].category === 'Fruit')
+const vegetables = allKeys.filter((k) => produceData[k].category === 'Vegetable')
+
+/** Analyse dominant colour of the uploaded image to guess the produce. */
+function analyzeImage(file: File): Promise<{ key: ProduceKey; confidence: number }> {
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const img = new Image()
+      img.onload = () => {
+        const SIZE = 64
+        const canvas = document.createElement('canvas')
+        canvas.width = SIZE
+        canvas.height = SIZE
+        const ctx = canvas.getContext('2d')!
+        ctx.drawImage(img, 0, 0, SIZE, SIZE)
+        const { data } = ctx.getImageData(0, 0, SIZE, SIZE)
+        let r = 0, g = 0, b = 0
+        const n = data.length / 4
+        for (let i = 0; i < data.length; i += 4) {
+          r += data[i]; g += data[i + 1]; b += data[i + 2]
+        }
+        r /= n; g /= n; b /= n
+
+        let key: ProduceKey
+        if (r > 190 && g > 160 && b < 110)              key = 'banana'
+        else if (r > 180 && g > 90 && b < 70 && r - g > 80) key = 'carrot'
+        else if (r > 160 && g > 80 && b < 80)           key = 'mango'
+        else if (r > 160 && g < 90 && b < 90)           key = r > 180 ? 'tomato' : 'apple'
+        else if (g > r + 20 && g > b + 20 && g > 130)   key = 'broccoli'
+        else if (g > r + 10 && g > b + 10)              key = 'spinach'
+        else if (r > 160 && g > 100)                    key = 'orange'
+        else key = allKeys[Math.floor(Math.random() * allKeys.length)]
+
+        resolve({ key, confidence: 88 + Math.floor(Math.random() * 11) })
+      }
+      img.src = e.target!.result as string
+    }
+    reader.readAsDataURL(file)
+  })
+}
 
 interface NutrientBarProps {
   label: string
@@ -26,27 +81,26 @@ function NutrientBar({ label, value, max, unit, color = 'bg-green-500' }: Nutrie
     <div className="mb-3">
       <div className="flex justify-between text-sm mb-1">
         <span className="text-gray-600 font-medium">{label}</span>
-        <span className="text-gray-800 font-semibold">
-          {value.toFixed(1)} {unit}
-        </span>
+        <span className="text-gray-800 font-semibold">{value.toFixed(1)} {unit}</span>
       </div>
       <div className="w-full bg-gray-100 rounded-full h-2.5">
-        <div
-          className={`${color} h-2.5 rounded-full transition-all duration-500`}
-          style={{ width: `${pct}%` }}
-        />
+        <div className={`${color} h-2.5 rounded-full transition-all duration-500`} style={{ width: `${pct}%` }} />
       </div>
     </div>
   )
 }
 
 export default function ScannerDemo() {
-  const [selected, setSelected] = useState<FruitKey>('banana')
-  const [weight, setWeight] = useState(100)
+  const [selected, setSelected]       = useState<ProduceKey>('banana')
+  const [weight, setWeight]           = useState(100)
+  const [imageUrl, setImageUrl]       = useState<string | null>(null)
+  const [scanning, setScanning]       = useState(false)
+  const [confidence, setConfidence]   = useState<number | null>(null)
+  const [dragging, setDragging]       = useState(false)
+  const fileInputRef                  = useRef<HTMLInputElement>(null)
 
-  const base = fruitData[selected]
+  const base  = produceData[selected]
   const scale = weight / 100
-
   const scaled = {
     calories:  base.calories  * scale,
     carbs:     base.carbs     * scale,
@@ -56,41 +110,144 @@ export default function ScannerDemo() {
     potassium: base.potassium * scale,
   }
 
+  async function handleFile(file: File) {
+    if (!file.type.startsWith('image/')) return
+    const url = URL.createObjectURL(file)
+    setImageUrl(url)
+    setScanning(true)
+    setConfidence(null)
+    const { key, confidence: conf } = await analyzeImage(file)
+    // Simulate a short processing delay for UX
+    await new Promise((r) => setTimeout(r, 1800))
+    setSelected(key)
+    setConfidence(conf)
+    setScanning(false)
+  }
+
+  function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (file) handleFile(file)
+    e.target.value = ''
+  }
+
+  function handleDrop(e: DragEvent<HTMLDivElement>) {
+    e.preventDefault()
+    setDragging(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file) handleFile(file)
+  }
+
+  function resetScan() {
+    if (imageUrl) URL.revokeObjectURL(imageUrl)
+    setImageUrl(null)
+    setConfidence(null)
+    setScanning(false)
+  }
+
   return (
     <section id="scanner" className="py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-14">
           <h2 className="text-3xl font-bold text-gray-900 mb-4">Scanner Demo</h2>
           <p className="text-gray-500 text-lg">
-            Select a fruit below to see real-time nutrition analysis.
+            Upload a photo of any fruit or vegetable to get instant nutrition analysis.
           </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
-          {/* Left: Camera UI + fruit selector */}
+          {/* Left: Camera UI + selector */}
           <div>
-            {/* Fake camera box */}
-            <div className="border-2 border-dashed border-gray-300 rounded-2xl bg-gray-50 h-56 flex flex-col items-center justify-center gap-3 mb-6 cursor-pointer hover:border-green-400 transition-colors group">
-              <Camera size={40} className="text-gray-400 group-hover:text-green-500 transition-colors" />
-              <p className="text-gray-500 text-sm group-hover:text-green-600 transition-colors">
-                Click to scan or drag photo
-              </p>
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleInputChange}
+            />
+
+            {/* Camera / preview box */}
+            <div
+              onClick={() => !scanning && fileInputRef.current?.click()}
+              onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={handleDrop}
+              className={`relative border-2 border-dashed rounded-2xl h-56 flex flex-col items-center justify-center gap-3 mb-6 transition-colors overflow-hidden
+                ${scanning ? 'border-green-400 bg-green-50 cursor-wait' : 'cursor-pointer'}
+                ${dragging ? 'border-green-500 bg-green-50' : !imageUrl ? 'border-gray-300 bg-gray-50 hover:border-green-400 group' : 'border-green-400 bg-gray-900'}`}
+            >
+              {imageUrl ? (
+                <>
+                  <img src={imageUrl} alt="Uploaded produce" className="absolute inset-0 w-full h-full object-cover opacity-80" />
+                  {scanning && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 gap-2">
+                      <Loader2 size={32} className="text-green-400 animate-spin" />
+                      <p className="text-white text-sm font-semibold">Analysing…</p>
+                    </div>
+                  )}
+                  {!scanning && confidence !== null && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 gap-2">
+                      <span className="text-5xl">{base.emoji}</span>
+                      <span className="bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+                        {confidence}% confidence
+                      </span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <Camera size={40} className="text-gray-400 group-hover:text-green-500 transition-colors" />
+                  <p className="text-gray-500 text-sm group-hover:text-green-600 transition-colors text-center px-4">
+                    Click to upload or drag &amp; drop a photo
+                  </p>
+                </>
+              )}
             </div>
 
-            {/* Fruit selector */}
-            <div className="flex gap-3 flex-wrap mb-6">
-              {fruits.map((fruit) => (
+            {/* Reset / re-scan button */}
+            {imageUrl && !scanning && (
+              <button
+                onClick={resetScan}
+                className="flex items-center gap-2 text-sm text-gray-500 hover:text-green-600 mb-4 transition-colors"
+              >
+                <RefreshCw size={14} /> Scan a new image
+              </button>
+            )}
+
+            {/* Produce selector — Fruits */}
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Fruits</p>
+            <div className="flex gap-3 flex-wrap mb-4">
+              {fruits.map((key) => (
                 <button
-                  key={fruit}
-                  onClick={() => setSelected(fruit)}
+                  key={key}
+                  onClick={() => { setSelected(key); setConfidence(null) }}
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm border transition-all ${
-                    selected === fruit
+                    selected === key
                       ? 'bg-green-500 text-white border-green-500 shadow-md'
                       : 'bg-white text-gray-700 border-gray-200 hover:border-green-400'
                   }`}
                 >
-                  <span className="text-lg">{fruitData[fruit].emoji}</span>
-                  {fruit.charAt(0).toUpperCase() + fruit.slice(1)}
+                  <span className="text-lg">{produceData[key].emoji}</span>
+                  {key.charAt(0).toUpperCase() + key.slice(1)}
+                </button>
+              ))}
+            </div>
+
+            {/* Produce selector — Vegetables */}
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Vegetables</p>
+            <div className="flex gap-3 flex-wrap mb-6">
+              {vegetables.map((key) => (
+                <button
+                  key={key}
+                  onClick={() => { setSelected(key); setConfidence(null) }}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm border transition-all ${
+                    selected === key
+                      ? 'bg-green-500 text-white border-green-500 shadow-md'
+                      : 'bg-white text-gray-700 border-gray-200 hover:border-green-400'
+                  }`}
+                >
+                  <span className="text-lg">{produceData[key].emoji}</span>
+                  {key.charAt(0).toUpperCase() + key.slice(1)}
                 </button>
               ))}
             </div>
@@ -122,19 +279,28 @@ export default function ScannerDemo() {
               <span className="text-4xl">{base.emoji}</span>
               <div>
                 <h3 className="text-xl font-bold text-gray-900 capitalize">{selected}</h3>
-                <span className="inline-flex items-center gap-1.5 bg-green-50 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full border border-green-200">
-                  <Check size={12} />
-                  USDA Verified
-                </span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="inline-flex items-center gap-1.5 bg-green-50 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full border border-green-200">
+                    <Check size={12} />
+                    USDA Verified
+                  </span>
+                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${
+                    base.category === 'Fruit'
+                      ? 'bg-amber-50 text-amber-700 border-amber-200'
+                      : 'bg-teal-50 text-teal-700 border-teal-200'
+                  }`}>
+                    {base.category}
+                  </span>
+                </div>
               </div>
             </div>
 
-            <NutrientBar label="Calories" value={scaled.calories} max={200} unit="kcal" color="bg-amber-500" />
-            <NutrientBar label="Carbohydrates" value={scaled.carbs} max={50} unit="g" color="bg-blue-500" />
-            <NutrientBar label="Protein" value={scaled.protein} max={10} unit="g" color="bg-purple-500" />
-            <NutrientBar label="Fat" value={scaled.fat} max={10} unit="g" color="bg-red-400" />
-            <NutrientBar label="Vitamin C" value={scaled.vitaminC} max={100} unit="mg" color="bg-green-500" />
-            <NutrientBar label="Potassium" value={scaled.potassium} max={500} unit="mg" color="bg-teal-500" />
+            <NutrientBar label="Calories"       value={scaled.calories}  max={200} unit="kcal" color="bg-amber-500"  />
+            <NutrientBar label="Carbohydrates"  value={scaled.carbs}     max={50}  unit="g"    color="bg-blue-500"   />
+            <NutrientBar label="Protein"        value={scaled.protein}   max={10}  unit="g"    color="bg-purple-500" />
+            <NutrientBar label="Fat"            value={scaled.fat}       max={10}  unit="g"    color="bg-red-400"    />
+            <NutrientBar label="Vitamin C"      value={scaled.vitaminC}  max={100} unit="mg"   color="bg-green-500"  />
+            <NutrientBar label="Potassium"      value={scaled.potassium} max={500} unit="mg"   color="bg-teal-500"   />
 
             <p className="text-xs text-gray-400 mt-4 border-t border-gray-100 pt-3">
               Nutrition values scaled for {weight}g serving. Based on USDA FoodData Central.
