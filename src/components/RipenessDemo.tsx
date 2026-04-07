@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Bell } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { Bell, Camera, Loader2, RefreshCw, Upload } from 'lucide-react'
 
 type ProduceKey = 'banana' | 'apple' | 'mango' | 'orange' | 'carrot' | 'broccoli' | 'tomato' | 'spinach'
 
@@ -27,11 +27,96 @@ function getRipenessColor(ripeness: number) {
 }
 
 export default function RipenessDemo() {
-  const [selected, setSelected]         = useState<ProduceKey>('banana')
-  const [mangoVariety, setMangoVariety] = useState('Alphonso')
+  const fileInputRef                      = useRef<HTMLInputElement>(null)
+  const [selected, setSelected]           = useState<ProduceKey>('banana')
+  const [mangoVariety, setMangoVariety]   = useState('Alphonso')
+  const [imageUrl, setImageUrl]           = useState<string | null>(null)
+  const [scanning, setScanning]           = useState(false)
+  const [dragging, setDragging]           = useState(false)
 
   const item   = produceData[selected]
   const colors = getRipenessColor(item.ripeness)
+
+  function openFilePicker() {
+    if (!scanning) fileInputRef.current?.click()
+  }
+
+  async function handleFile(file: File) {
+    if (!file.type.startsWith('image/')) return
+    const url = URL.createObjectURL(file)
+    setImageUrl(url)
+    setScanning(true)
+
+    // Determine dominant hue to guess the produce
+    await new Promise<void>((resolve) => {
+      const reader = new FileReader()
+      reader.onload = (ev) => {
+        const img = new Image()
+        img.onload = () => {
+          const SIZE = 128
+          const canvas = document.createElement('canvas')
+          canvas.width = SIZE
+          canvas.height = SIZE
+          const ctx = canvas.getContext('2d')!
+          ctx.drawImage(img, 0, 0, SIZE, SIZE)
+          const margin = Math.floor(SIZE * 0.2)
+          const { data } = ctx.getImageData(margin, margin, SIZE - margin * 2, SIZE - margin * 2)
+          let r = 0, g = 0, b = 0, count = 0
+          for (let i = 0; i < data.length; i += 4) {
+            const pr = data[i], pg = data[i + 1], pb = data[i + 2]
+            if (pr > 220 && pg > 220 && pb > 220) continue
+            if (Math.max(pr, pg, pb) - Math.min(pr, pg, pb) < 20 && Math.max(pr, pg, pb) < 180) continue
+            r += pr; g += pg; b += pb; count++
+          }
+          if (count < 50) {
+            const full = ctx.getImageData(0, 0, SIZE, SIZE)
+            const n = full.data.length / 4
+            r = 0; g = 0; b = 0
+            for (let i = 0; i < full.data.length; i += 4) { r += full.data[i]; g += full.data[i + 1]; b += full.data[i + 2] }
+            r /= n; g /= n; b /= n
+          } else { r /= count; g /= count; b /= count }
+
+          let key: ProduceKey
+          if      (r > 170 && g > 140 && b < 100 && r - b > 80)        key = 'banana'
+          else if (r > 180 && g > 100 && g < 175 && b < 70)            key = 'orange'
+          else if (r > 170 && g > 65  && b < 75  && r - g > 80)        key = 'carrot'
+          else if (r > 150 && g > 70  && b < 80  && r - b > 90)        key = 'mango'
+          else if (r > 140 && g < 100 && b < 100 && r - g > 50)        key = r > 165 ? 'tomato' : 'apple'
+          else if (g > r + 15 && g > b + 15 && g > 110)                key = 'broccoli'
+          else if (g > r + 8  && g > b + 8)                            key = 'spinach'
+          else key = allKeys[Math.floor(Math.random() * allKeys.length)]
+
+          setSelected(key)
+          resolve()
+        }
+        img.src = ev.target!.result as string
+      }
+      reader.readAsDataURL(file)
+    })
+
+    await new Promise((r) => setTimeout(r, 1600))
+    setScanning(false)
+  }
+
+  function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (file) handleFile(file)
+    e.target.value = ''
+  }
+
+  function handleDrop(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragging(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file) handleFile(file)
+  }
+
+  function resetScan() {
+    if (imageUrl) URL.revokeObjectURL(imageUrl)
+    setImageUrl(null)
+    setScanning(false)
+  }
 
   function ProduceButton({ k }: { k: ProduceKey }) {
     return (
@@ -62,6 +147,75 @@ export default function RipenessDemo() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
           {/* Left: Controls */}
           <div>
+            {/* Image upload */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={scanning}
+              onChange={handleInputChange}
+            />
+
+            {/* Drop zone / preview */}
+            <div
+              onClick={openFilePicker}
+              onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setDragging(true) }}
+              onDragLeave={(e) => { e.stopPropagation(); setDragging(false) }}
+              onDrop={handleDrop}
+              role="button"
+              tabIndex={scanning ? -1 : 0}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openFilePicker() }}
+              aria-label="Upload fruit or vegetable photo for ripeness analysis"
+              className={`relative border-2 border-dashed rounded-2xl h-44 flex flex-col items-center justify-center gap-3 mb-3 transition-colors overflow-hidden select-none
+                ${scanning ? 'border-green-400 bg-green-50 cursor-wait' : 'cursor-pointer'}
+                ${dragging ? 'border-green-500 bg-green-50' : !imageUrl ? 'border-gray-300 bg-gray-50 hover:border-green-400 group' : 'border-green-400 bg-gray-900'}`}
+            >
+              {imageUrl ? (
+                <>
+                  <img src={imageUrl} alt="Uploaded produce" className="absolute inset-0 w-full h-full object-cover opacity-80" />
+                  {scanning && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 gap-2">
+                      <Loader2 size={28} className="text-green-400 animate-spin" />
+                      <p className="text-white text-sm font-semibold">Detecting ripeness…</p>
+                    </div>
+                  )}
+                  {!scanning && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 gap-1">
+                      <span className="text-4xl">{item.emoji}</span>
+                      <span className="bg-amber-500 text-white text-xs font-bold px-3 py-1 rounded-full">{item.ripeness}% ripe</span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <Camera size={36} className="text-gray-400 group-hover:text-green-500 transition-colors" />
+                  <p className="text-gray-500 text-sm group-hover:text-green-600 transition-colors text-center px-4">
+                    Click to upload or drag &amp; drop a photo
+                  </p>
+                </>
+              )}
+            </div>
+
+            {!scanning && !imageUrl && (
+              <button
+                type="button"
+                onClick={openFilePicker}
+                className="flex items-center justify-center gap-2 w-full mb-5 py-2.5 rounded-xl border-2 border-green-500 bg-green-500 text-white text-sm font-semibold cursor-pointer hover:bg-green-600 hover:border-green-600 transition-colors"
+              >
+                <Upload size={16} />
+                Upload Image
+              </button>
+            )}
+            {imageUrl && !scanning && (
+              <button
+                onClick={resetScan}
+                className="flex items-center gap-2 text-sm text-gray-500 hover:text-green-600 mb-5 transition-colors"
+              >
+                <RefreshCw size={14} /> Scan a new image
+              </button>
+            )}
+
             {/* Fruit selector */}
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Fruits</p>
             <div className="flex gap-3 flex-wrap mb-4">

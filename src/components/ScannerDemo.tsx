@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { DragEvent } from 'react'
 import { Camera, Check, Loader2, RefreshCw, Upload } from 'lucide-react'
 
@@ -123,6 +123,7 @@ function NutrientBar({ label, value, max, unit, color = 'bg-green-500' }: Nutrie
 }
 
 export default function ScannerDemo() {
+  const fileInputRef                  = useRef<HTMLInputElement>(null)
   const [selected, setSelected]       = useState<ProduceKey>('banana')
   const [weight, setWeight]           = useState(100)
   const [imageUrl, setImageUrl]       = useState<string | null>(null)
@@ -139,6 +140,10 @@ export default function ScannerDemo() {
     fat:       base.fat       * scale,
     vitaminC:  base.vitaminC  * scale,
     potassium: base.potassium * scale,
+  }
+
+  function openFilePicker() {
+    if (!scanning) fileInputRef.current?.click()
   }
 
   async function handleFile(file: File) {
@@ -163,6 +168,7 @@ export default function ScannerDemo() {
 
   function handleDrop(e: DragEvent<HTMLDivElement>) {
     e.preventDefault()
+    e.stopPropagation()
     setDragging(false)
     const file = e.dataTransfer.files?.[0]
     if (file) handleFile(file)
@@ -188,23 +194,28 @@ export default function ScannerDemo() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
           {/* Left: Camera UI + selector */}
           <div>
-            {/* File input — label makes it natively clickable in all browsers */}
-            <label htmlFor="scan-file-input" className="block">
-              <input
-                id="scan-file-input"
-                type="file"
-                accept="image/*"
-                className="hidden"
-                disabled={scanning}
-                onChange={handleInputChange}
-              />
+            {/* File input — triggered programmatically for maximum cross-browser reliability */}
+            <input
+              ref={fileInputRef}
+              id="scan-file-input"
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={scanning}
+              onChange={handleInputChange}
+            />
 
-              {/* Camera / preview box (label wraps it so clicking anywhere triggers file picker) */}
+              {/* Camera / preview box */}
               <div
-                onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
-                onDragLeave={() => setDragging(false)}
+                onClick={openFilePicker}
+                onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setDragging(true) }}
+                onDragLeave={(e) => { e.stopPropagation(); setDragging(false) }}
                 onDrop={handleDrop}
-                className={`relative border-2 border-dashed rounded-2xl h-56 flex flex-col items-center justify-center gap-3 mb-3 transition-colors overflow-hidden
+                role="button"
+                tabIndex={scanning ? -1 : 0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openFilePicker() }}
+                aria-label="Upload fruit or vegetable photo"
+                className={`relative border-2 border-dashed rounded-2xl h-56 flex flex-col items-center justify-center gap-3 mb-3 transition-colors overflow-hidden select-none
                   ${scanning ? 'border-green-400 bg-green-50 cursor-wait' : 'cursor-pointer'}
                   ${dragging ? 'border-green-500 bg-green-50' : !imageUrl ? 'border-gray-300 bg-gray-50 hover:border-green-400 group' : 'border-green-400 bg-gray-900'}`}
               >
@@ -235,17 +246,17 @@ export default function ScannerDemo() {
                   </>
                 )}
               </div>
-            </label>
 
             {/* Explicit upload button — always visible when no scan is in progress */}
             {!scanning && !imageUrl && (
-              <label
-                htmlFor="scan-file-input"
+              <button
+                type="button"
+                onClick={openFilePicker}
                 className="flex items-center justify-center gap-2 w-full mb-4 py-2.5 rounded-xl border-2 border-green-500 bg-green-500 text-white text-sm font-semibold cursor-pointer hover:bg-green-600 hover:border-green-600 transition-colors"
               >
                 <Upload size={16} />
                 Upload Image
-              </label>
+              </button>
             )}
 
             {/* Reset / re-scan button */}
