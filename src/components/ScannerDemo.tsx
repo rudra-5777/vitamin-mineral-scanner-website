@@ -28,35 +28,67 @@ const allKeys = Object.keys(produceData) as ProduceKey[]
 const fruits     = allKeys.filter((k) => produceData[k].category === 'Fruit')
 const vegetables = allKeys.filter((k) => produceData[k].category === 'Vegetable')
 
-/** Analyse dominant colour of the uploaded image to guess the produce. */
+/** Analyse dominant colour of the uploaded image to guess the produce.
+ *  Samples the centre 60% of the image and ignores near-white / near-grey
+ *  background pixels so the result reflects the actual fruit/vegetable colour.
+ */
 function analyzeImage(file: File): Promise<{ key: ProduceKey; confidence: number }> {
   return new Promise((resolve) => {
     const reader = new FileReader()
     reader.onload = (e) => {
       const img = new Image()
       img.onload = () => {
-        const SIZE = 64
+        const SIZE = 128
         const canvas = document.createElement('canvas')
         canvas.width = SIZE
         canvas.height = SIZE
         const ctx = canvas.getContext('2d')!
         ctx.drawImage(img, 0, 0, SIZE, SIZE)
-        const { data } = ctx.getImageData(0, 0, SIZE, SIZE)
-        let r = 0, g = 0, b = 0
-        const n = data.length / 4
+
+        // Sample only the central 60% to reduce background influence
+        const margin = Math.floor(SIZE * 0.20)
+        const { data } = ctx.getImageData(margin, margin, SIZE - margin * 2, SIZE - margin * 2)
+
+        let r = 0, g = 0, b = 0, count = 0
         for (let i = 0; i < data.length; i += 4) {
-          r += data[i]; g += data[i + 1]; b += data[i + 2]
+          const pr = data[i], pg = data[i + 1], pb = data[i + 2]
+          // Skip near-white pixels (background / highlights)
+          if (pr > 220 && pg > 220 && pb > 220) continue
+          // Skip near-grey / black pixels (shadows, borders)
+          const max = Math.max(pr, pg, pb)
+          const min = Math.min(pr, pg, pb)
+          if (max - min < 20 && max < 180) continue
+          r += pr; g += pg; b += pb; count++
         }
-        r /= n; g /= n; b /= n
+
+        // Fall back to full-image average if too few coloured pixels found
+        if (count < 50) {
+          const full = ctx.getImageData(0, 0, SIZE, SIZE)
+          const n = full.data.length / 4
+          r = 0; g = 0; b = 0
+          for (let i = 0; i < full.data.length; i += 4) {
+            r += full.data[i]; g += full.data[i + 1]; b += full.data[i + 2]
+          }
+          r /= n; g /= n; b /= n
+        } else {
+          r /= count; g /= count; b /= count
+        }
 
         let key: ProduceKey
-        if (r > 190 && g > 160 && b < 110)              key = 'banana'
-        else if (r > 180 && g > 90 && b < 70 && r - g > 80) key = 'carrot'
-        else if (r > 160 && g > 80 && b < 80)           key = 'mango'
-        else if (r > 160 && g < 90 && b < 90)           key = r > 180 ? 'tomato' : 'apple'
-        else if (g > r + 20 && g > b + 20 && g > 130)   key = 'broccoli'
-        else if (g > r + 10 && g > b + 10)              key = 'spinach'
-        else if (r > 160 && g > 100)                    key = 'orange'
+        // Bright yellow → banana
+        if      (r > 170 && g > 140 && b < 100 && r - b > 80)         key = 'banana'
+        // Orange (red+medium-green, low blue) → orange; check before carrot
+        else if (r > 180 && g > 100 && g < 175 && b < 70)             key = 'orange'
+        // Deep orange with red >> green → carrot
+        else if (r > 170 && g > 65  && b < 75 && r - g > 80)          key = 'carrot'
+        // Golden / yellow-orange → mango
+        else if (r > 150 && g > 70  && b < 80 && r - b > 90)          key = 'mango'
+        // Red (green and blue both low) → apple or tomato
+        else if (r > 140 && g < 100 && b < 100 && r - g > 50)         key = r > 165 ? 'tomato' : 'apple'
+        // Bright green → broccoli
+        else if (g > r + 15 && g > b + 15 && g > 110)                 key = 'broccoli'
+        // Any remaining green dominance → spinach
+        else if (g > r + 8  && g > b + 8)                             key = 'spinach'
         else key = allKeys[Math.floor(Math.random() * allKeys.length)]
 
         resolve({ key, confidence: 88 + Math.floor(Math.random() * 11) })
