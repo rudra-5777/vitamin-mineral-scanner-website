@@ -1,6 +1,6 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import type { DragEvent } from 'react'
-import { Camera, Check, Loader2, RefreshCw } from 'lucide-react'
+import { Camera, Check, Loader2, RefreshCw, Upload } from 'lucide-react'
 
 type ProduceKey = 'banana' | 'apple' | 'mango' | 'orange' | 'carrot' | 'broccoli' | 'tomato' | 'spinach'
 
@@ -129,7 +129,6 @@ export default function ScannerDemo() {
   const [scanning, setScanning]       = useState(false)
   const [confidence, setConfidence]   = useState<number | null>(null)
   const [dragging, setDragging]       = useState(false)
-  const fileInputRef                  = useRef<HTMLInputElement>(null)
 
   const base  = produceData[selected]
   const scale = weight / 100
@@ -189,52 +188,65 @@ export default function ScannerDemo() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
           {/* Left: Camera UI + selector */}
           <div>
-            {/* Hidden file input */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleInputChange}
-            />
+            {/* File input — label makes it natively clickable in all browsers */}
+            <label htmlFor="scan-file-input" className="block">
+              <input
+                id="scan-file-input"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                disabled={scanning}
+                onChange={handleInputChange}
+              />
 
-            {/* Camera / preview box */}
-            <div
-              onClick={() => !scanning && fileInputRef.current?.click()}
-              onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
-              onDragLeave={() => setDragging(false)}
-              onDrop={handleDrop}
-              className={`relative border-2 border-dashed rounded-2xl h-56 flex flex-col items-center justify-center gap-3 mb-6 transition-colors overflow-hidden
-                ${scanning ? 'border-green-400 bg-green-50 cursor-wait' : 'cursor-pointer'}
-                ${dragging ? 'border-green-500 bg-green-50' : !imageUrl ? 'border-gray-300 bg-gray-50 hover:border-green-400 group' : 'border-green-400 bg-gray-900'}`}
-            >
-              {imageUrl ? (
-                <>
-                  <img src={imageUrl} alt="Uploaded produce" className="absolute inset-0 w-full h-full object-cover opacity-80" />
-                  {scanning && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 gap-2">
-                      <Loader2 size={32} className="text-green-400 animate-spin" />
-                      <p className="text-white text-sm font-semibold">Analysing…</p>
-                    </div>
-                  )}
-                  {!scanning && confidence !== null && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 gap-2">
-                      <span className="text-5xl">{base.emoji}</span>
-                      <span className="bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-                        {confidence}% confidence
-                      </span>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <>
-                  <Camera size={40} className="text-gray-400 group-hover:text-green-500 transition-colors" />
-                  <p className="text-gray-500 text-sm group-hover:text-green-600 transition-colors text-center px-4">
-                    Click to upload or drag &amp; drop a photo
-                  </p>
-                </>
-              )}
-            </div>
+              {/* Camera / preview box (label wraps it so clicking anywhere triggers file picker) */}
+              <div
+                onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
+                onDragLeave={() => setDragging(false)}
+                onDrop={handleDrop}
+                className={`relative border-2 border-dashed rounded-2xl h-56 flex flex-col items-center justify-center gap-3 mb-3 transition-colors overflow-hidden
+                  ${scanning ? 'border-green-400 bg-green-50 cursor-wait' : 'cursor-pointer'}
+                  ${dragging ? 'border-green-500 bg-green-50' : !imageUrl ? 'border-gray-300 bg-gray-50 hover:border-green-400 group' : 'border-green-400 bg-gray-900'}`}
+              >
+                {imageUrl ? (
+                  <>
+                    <img src={imageUrl} alt="Uploaded produce" className="absolute inset-0 w-full h-full object-cover opacity-80" />
+                    {scanning && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 gap-2">
+                        <Loader2 size={32} className="text-green-400 animate-spin" />
+                        <p className="text-white text-sm font-semibold">Analysing…</p>
+                      </div>
+                    )}
+                    {!scanning && confidence !== null && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 gap-2">
+                        <span className="text-5xl">{base.emoji}</span>
+                        <span className="bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+                          {confidence}% confidence
+                        </span>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <Camera size={40} className="text-gray-400 group-hover:text-green-500 transition-colors" />
+                    <p className="text-gray-500 text-sm group-hover:text-green-600 transition-colors text-center px-4">
+                      Click to upload or drag &amp; drop a photo
+                    </p>
+                  </>
+                )}
+              </div>
+            </label>
+
+            {/* Explicit upload button — always visible when no scan is in progress */}
+            {!scanning && !imageUrl && (
+              <label
+                htmlFor="scan-file-input"
+                className="flex items-center justify-center gap-2 w-full mb-4 py-2.5 rounded-xl border-2 border-green-500 bg-green-500 text-white text-sm font-semibold cursor-pointer hover:bg-green-600 hover:border-green-600 transition-colors"
+              >
+                <Upload size={16} />
+                Upload Image
+              </label>
+            )}
 
             {/* Reset / re-scan button */}
             {imageUrl && !scanning && (
