@@ -1,5 +1,6 @@
 import Header from './components/Header'
 import Hero from './components/Hero'
+import FruitRecognizer from './components/FruitRecognizer'
 import ScannerDemo from './components/ScannerDemo'
 import RipenessDemo from './components/RipenessDemo'
 import NutritionInfo from './components/NutritionInfo'
@@ -11,6 +12,7 @@ function App() {
       <Header />
       <main>
         <Hero />
+        <FruitRecognizer />
         <ScannerDemo />
         <RipenessDemo />
         <NutritionInfo />

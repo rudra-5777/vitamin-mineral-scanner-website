@@ -3,4 +3,15 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  build: {
+    chunkSizeWarningLimit: 1300,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'tf-core': ['@tensorflow/tfjs'],
+          'mobilenet': ['@tensorflow-models/mobilenet'],
+        },
+      },
+    },
+  },
 })
