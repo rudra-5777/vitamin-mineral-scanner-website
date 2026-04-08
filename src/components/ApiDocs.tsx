@@ -13,25 +13,28 @@ const codeBlocks: Record<ApiTabKey, string> = {
   identify: `// Initialize Supabase client
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// Call Claude API for fruit identification
-const response = await anthropic.messages.create({
-  model: "claude-opus-4-5",
-  max_tokens: 1024,
-  messages: [{
-    role: "user",
-    content: [{
-      type: "image",
-      source: {
-        type: "base64",
-        media_type: "image/jpeg",
-        data: imageBase64
-      }
-    }, {
-      type: "text",
-      text: "Identify this fruit and provide: name, ripeness (0-100%), estimated weight in grams"
+// Call OpenRouter API for fruit identification
+const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+  method: 'POST',
+  headers: {
+    'Authorization': \`Bearer \${import.meta.env.VITE_OPENROUTER_API_KEY}\`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    model: 'anthropic/claude-opus-4-5',
+    messages: [{
+      role: 'user',
+      content: [{
+        type: 'image_url',
+        image_url: { url: \`data:image/jpeg;base64,\${imageBase64}\` }
+      }, {
+        type: 'text',
+        text: 'Identify this fruit and provide: name, ripeness (0-100%), estimated weight in grams'
+      }]
     }]
-  }]
-});`,
+  })
+});
+const result = await response.json();`,
 
   nutrition: `// Fetch USDA nutrition data
 const { data: nutritionData } = await supabase

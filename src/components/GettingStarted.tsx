@@ -19,7 +19,7 @@ const steps: Step[] = [
     number: 2,
     title: 'Configure Supabase',
     description: 'Create a Supabase project and add your credentials to the environment file.',
-    code: 'VITE_SUPABASE_URL=your-project-url\nVITE_SUPABASE_ANON_KEY=your-anon-key\nVITE_CLAUDE_API_KEY=your-claude-key',
+    code: 'VITE_SUPABASE_URL=your-project-url\nVITE_SUPABASE_ANON_KEY=your-anon-key\nVITE_OPENROUTER_API_KEY=your-openrouter-key',
   },
   {
     number: 3,
