@@ -1,3 +1,5 @@
+import { ShieldCheck } from 'lucide-react'
+
 export default function Footer() {
   const year = new Date().getFullYear()
 
@@ -7,14 +9,8 @@ export default function Footer() {
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-10">
           {/* Brand */}
           <div className="lg:col-span-2">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-8 h-8 rounded-lg bg-green-500 flex items-center justify-center">
-                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18" />
-                </svg>
-              </div>
-              <span className="text-lg font-bold text-gradient">VitaScan</span>
+            <div className="flex items-center gap-2 text-xl font-bold text-white mb-3">
+              <ShieldCheck className="w-6 h-6 text-green-500" /> AgroScan AI
             </div>
             <p className="text-sm text-gray-500 max-w-xs leading-relaxed">
               AI-powered vitamin, mineral, and ripeness analysis for fruits, vegetables, and packaged foods.
@@ -52,7 +48,7 @@ export default function Footer() {
 
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 border-t border-white/5">
           <p className="text-xs text-gray-600">
-            © {year} VitaScan. All rights reserved.
+            © {year} AgroScan AI. Built with Claude AI &amp; Supabase.
           </p>
           <p className="text-xs text-gray-600">
             Nutritional data is for informational purposes only. Consult a healthcare professional for medical advice.

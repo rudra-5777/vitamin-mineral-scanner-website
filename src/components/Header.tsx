@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ShieldCheck } from 'lucide-react'
 
 const NAV_LINKS = ['Recognizer', 'Scanner', 'Ripeness', 'Nutrition', 'About']
 
@@ -11,13 +12,8 @@ export default function Header() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <a href="#" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-green-500 flex items-center justify-center">
-              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18" />
-              </svg>
-            </div>
-            <span className="text-lg font-bold text-gradient">VitaScan</span>
+            <ShieldCheck className="w-6 h-6 text-green-500" />
+            <span className="text-lg font-bold text-gradient">AgroScan AI</span>
           </a>
 
           {/* Desktop nav */}
