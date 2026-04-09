@@ -7,13 +7,23 @@ const KNOWN_KEYS = [
   'potato', 'onion', 'garlic', 'cucumber', 'pepper', 'lettuce',
 ]
 
+// Sort keys longest-first so more specific names (e.g. "pineapple") are
+// matched before any shorter substring they contain (e.g. "apple").
+const SORTED_KEYS = [...KNOWN_KEYS].sort((a, b) => b.length - a.length)
+
 /**
  * Attempt to match a free-form food name string to one of the known
- * database keys. Falls back to 'default' when no match is found.
+ * database keys. Matches whole words where possible, falling back to
+ * substring matching. Falls back to 'default' when no match is found.
  */
 export function normalizeFood(name: string): string {
   const lower = name.toLowerCase()
-  for (const key of KNOWN_KEYS) {
+  // Prefer whole-word matches first (avoids "pear" matching inside "pears" etc.)
+  for (const key of SORTED_KEYS) {
+    if (new RegExp(`\\b${key}\\b`).test(lower)) return key
+  }
+  // Fall back to substring match, still using longest-key-first order
+  for (const key of SORTED_KEYS) {
     if (lower.includes(key)) return key
   }
   return 'default'
