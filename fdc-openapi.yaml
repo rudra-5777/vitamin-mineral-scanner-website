@@ -1,0 +1,1018 @@
+openapi: 3.0.0
+info:
+  title: Food Data Central API
+  version: 1.0.1
+  description: REST access to FoodData Central (FDC) for application developers.
+
+servers:
+  - url: https://api.nal.usda.gov/fdc
+
+security:
+  - ApiKeyAuth: []
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: query
+      name: api_key
+
+  schemas:
+    AbridgedFoodNutrient:
+      type: object
+      properties:
+        number:
+          type: integer
+        name:
+          type: string
+        amount:
+          type: number
+          format: float
+        unitName:
+          type: string
+        derivationCode:
+          type: string
+        derivationDescription:
+          type: string
+
+    Nutrient:
+      type: object
+      properties:
+        id:
+          type: integer
+        number:
+          type: string
+        name:
+          type: string
+        rank:
+          type: integer
+        unitName:
+          type: string
+
+    FoodNutrientDerivation:
+      type: object
+      properties:
+        code:
+          type: string
+        description:
+          type: string
+
+    FoodNutrient:
+      type: object
+      properties:
+        id:
+          type: integer
+        amount:
+          type: number
+          format: float
+        dataPoints:
+          type: integer
+        min:
+          type: number
+          format: float
+        max:
+          type: number
+          format: float
+        median:
+          type: number
+          format: float
+        nutrient:
+          $ref: '#/components/schemas/Nutrient'
+        foodNutrientDerivation:
+          $ref: '#/components/schemas/FoodNutrientDerivation'
+
+    AbridgedFoodItem:
+      type: object
+      properties:
+        dataType:
+          type: string
+        description:
+          type: string
+        fdcId:
+          type: integer
+        foodNutrients:
+          type: array
+          items:
+            $ref: '#/components/schemas/AbridgedFoodNutrient'
+        publicationDate:
+          type: string
+        brandOwner:
+          type: string
+          description: Present only for Branded foods
+        gtinUpc:
+          type: string
+          description: Present only for Branded foods
+        ndbNumber:
+          type: integer
+          description: Present only for Foundation and SR Legacy foods
+        foodCode:
+          type: string
+          description: Present only for Survey (FNDDS) foods
+
+    LabelNutrients:
+      type: object
+      description: Nutrient amounts as found on the food label
+      properties:
+        fat:
+          type: object
+          properties:
+            value:
+              type: number
+              format: float
+        saturatedFat:
+          type: object
+          properties:
+            value:
+              type: number
+              format: float
+        transFat:
+          type: object
+          properties:
+            value:
+              type: number
+              format: float
+        cholesterol:
+          type: object
+          properties:
+            value:
+              type: number
+              format: float
+        sodium:
+          type: object
+          properties:
+            value:
+              type: number
+              format: float
+        carbohydrates:
+          type: object
+          properties:
+            value:
+              type: number
+              format: float
+        fiber:
+          type: object
+          properties:
+            value:
+              type: number
+              format: float
+        sugars:
+          type: object
+          properties:
+            value:
+              type: number
+              format: float
+        protein:
+          type: object
+          properties:
+            value:
+              type: number
+              format: float
+        calcium:
+          type: object
+          properties:
+            value:
+              type: number
+              format: float
+        iron:
+          type: object
+          properties:
+            value:
+              type: number
+              format: float
+        potassium:
+          type: object
+          properties:
+            value:
+              type: number
+              format: float
+        calories:
+          type: object
+          properties:
+            value:
+              type: number
+              format: float
+
+    BrandedFoodItem:
+      type: object
+      properties:
+        fdcId:
+          type: integer
+        description:
+          type: string
+        dataType:
+          type: string
+          example: Branded
+        publicationDate:
+          type: string
+          format: date
+        brandOwner:
+          type: string
+        brandName:
+          type: string
+        subbrandName:
+          type: string
+        gtinUpc:
+          type: string
+        ingredients:
+          type: string
+        notAnonymous:
+          type: boolean
+        foodCategory:
+          type: string
+        foodCategoryId:
+          type: integer
+        packageWeight:
+          type: string
+        modifiedDate:
+          type: string
+          format: date
+        availableDate:
+          type: string
+          format: date
+        marketCountry:
+          type: string
+        discontinuedDate:
+          type: string
+          format: date
+        preparationStateCode:
+          type: string
+        tradeChannel:
+          type: array
+          items:
+            type: string
+        servingSize:
+          type: number
+          format: float
+        servingSizeUnit:
+          type: string
+        householdServingFullText:
+          type: string
+        foodNutrients:
+          type: array
+          items:
+            $ref: '#/components/schemas/FoodNutrient'
+        labelNutrients:
+          $ref: '#/components/schemas/LabelNutrients'
+
+    SampleFoodItem:
+      type: object
+      properties:
+        fdcId:
+          type: integer
+        datatype:
+          type: string
+        description:
+          type: string
+        foodClass:
+          type: string
+        publicationDate:
+          type: string
+          format: date
+        foodAttributes:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              sequenceNumber:
+                type: integer
+              value:
+                type: string
+              foodAttributeType:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  description:
+                    type: string
+
+    FoundationFoodItem:
+      type: object
+      properties:
+        fdcId:
+          type: integer
+        dataType:
+          type: string
+          example: Foundation
+        description:
+          type: string
+        foodClass:
+          type: string
+        footNote:
+          type: string
+        isHistoricalReference:
+          type: boolean
+        ndbNumber:
+          type: integer
+        publicationDate:
+          type: string
+          format: date
+        scientificName:
+          type: string
+        foodCategory:
+          type: object
+          properties:
+            id:
+              type: integer
+            code:
+              type: string
+            description:
+              type: string
+        foodComponents:
+          type: array
+          items:
+            type: object
+        foodNutrients:
+          type: array
+          items:
+            $ref: '#/components/schemas/FoodNutrient'
+        foodPortions:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              amount:
+                type: number
+                format: float
+              gramWeight:
+                type: number
+                format: float
+              minYearAcquired:
+                type: integer
+              modifier:
+                type: string
+              portionDescription:
+                type: string
+              sequenceNumber:
+                type: integer
+        inputFoods:
+          type: array
+          items:
+            $ref: '#/components/schemas/SampleFoodItem'
+        nutrientConversionFactors:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+              proteinValue:
+                type: number
+                format: float
+              fatValue:
+                type: number
+                format: float
+              carbohydrateValue:
+                type: number
+                format: float
+              value:
+                type: number
+                format: float
+
+    SRLegacyFoodItem:
+      type: object
+      properties:
+        fdcId:
+          type: integer
+        dataType:
+          type: string
+          example: SR Legacy
+        description:
+          type: string
+        foodClass:
+          type: string
+        isHistoricalReference:
+          type: boolean
+        ndbNumber:
+          type: integer
+        publicationDate:
+          type: string
+          format: date
+        scientificName:
+          type: string
+        foodCategory:
+          type: object
+          properties:
+            id:
+              type: integer
+            code:
+              type: string
+            description:
+              type: string
+        foodNutrients:
+          type: array
+          items:
+            $ref: '#/components/schemas/FoodNutrient'
+        foodPortions:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              amount:
+                type: number
+                format: float
+              gramWeight:
+                type: number
+                format: float
+              minYearAcquired:
+                type: integer
+              modifier:
+                type: string
+              portionDescription:
+                type: string
+              sequenceNumber:
+                type: integer
+        nutrientConversionFactors:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+              proteinValue:
+                type: number
+                format: float
+              fatValue:
+                type: number
+                format: float
+              carbohydrateValue:
+                type: number
+                format: float
+              value:
+                type: number
+                format: float
+
+    SurveyFoodItem:
+      type: object
+      properties:
+        fdcId:
+          type: integer
+        datatype:
+          type: string
+          example: Survey (FNDDS)
+        description:
+          type: string
+        endDate:
+          type: string
+          format: date
+        foodClass:
+          type: string
+        foodCode:
+          type: string
+        publicationDate:
+          type: string
+          format: date
+        startDate:
+          type: string
+          format: date
+        foodAttributes:
+          type: array
+          items:
+            type: object
+        foodPortions:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              amount:
+                type: number
+                format: float
+              gramWeight:
+                type: number
+                format: float
+              modifier:
+                type: string
+              portionDescription:
+                type: string
+              sequenceNumber:
+                type: integer
+        inputFoods:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              foodDescription:
+                type: string
+              inputFood:
+                $ref: '#/components/schemas/SampleFoodItem'
+        wweiaFoodCategory:
+          type: object
+          properties:
+            wweiaFoodCategoryCode:
+              type: integer
+            wweiaFoodCategoryDescription:
+              type: string
+
+    FoodsCriteria:
+      type: object
+      required:
+        - fdcIds
+      properties:
+        fdcIds:
+          type: array
+          description: List of up to 20 FDC IDs
+          maxItems: 20
+          items:
+            type: integer
+        format:
+          type: string
+          description: Response format (abridged or full)
+          enum:
+            - abridged
+            - full
+        nutrients:
+          type: array
+          description: List of up to 25 nutrient IDs to include
+          maxItems: 25
+          items:
+            type: integer
+
+    FoodListCriteria:
+      type: object
+      properties:
+        dataType:
+          type: array
+          description: Filter by data type
+          items:
+            type: string
+            enum:
+              - Branded
+              - Foundation
+              - Survey (FNDDS)
+              - SR Legacy
+        pageSize:
+          type: integer
+          description: Number of results per page (max 200)
+          default: 50
+          maximum: 200
+          minimum: 1
+        pageNumber:
+          type: integer
+          description: Page number to retrieve (1-based)
+          default: 1
+          minimum: 1
+        sortBy:
+          type: string
+          description: Field to sort by
+          enum:
+            - dataType.keyword
+            - lowercaseDescription.keyword
+            - fdcId
+            - publishedDate
+        sortOrder:
+          type: string
+          description: Sort direction
+          enum:
+            - asc
+            - desc
+
+    FoodSearchCriteria:
+      type: object
+      required:
+        - query
+      properties:
+        query:
+          type: string
+          description: Search terms to match against food descriptions, ingredients, etc.
+        dataType:
+          type: array
+          description: Filter by data type
+          items:
+            type: string
+            enum:
+              - Branded
+              - Foundation
+              - Survey (FNDDS)
+              - SR Legacy
+        pageSize:
+          type: integer
+          description: Number of results per page (max 200)
+          default: 50
+          maximum: 200
+          minimum: 1
+        pageNumber:
+          type: integer
+          description: Page number to retrieve (1-based)
+          default: 1
+          minimum: 1
+        sortBy:
+          type: string
+          description: Field to sort by
+          enum:
+            - dataType.keyword
+            - lowercaseDescription.keyword
+            - fdcId
+            - publishedDate
+        sortOrder:
+          type: string
+          description: Sort direction
+          enum:
+            - asc
+            - desc
+        brandOwner:
+          type: string
+          description: Filter Branded foods by brand owner
+
+    SearchResultFood:
+      type: object
+      properties:
+        fdcId:
+          type: integer
+        dataType:
+          type: string
+        description:
+          type: string
+        foodCode:
+          type: string
+        foodNutrients:
+          type: array
+          items:
+            $ref: '#/components/schemas/AbridgedFoodNutrient'
+        publicationDate:
+          type: string
+          format: date
+        scientificName:
+          type: string
+        brandOwner:
+          type: string
+        gtinUpc:
+          type: string
+        ingredients:
+          type: string
+        ndbNumber:
+          type: integer
+        additionalDescriptions:
+          type: string
+        allHighlightFields:
+          type: string
+        score:
+          type: number
+          format: float
+
+    SearchResult:
+      type: object
+      properties:
+        foodSearchCriteria:
+          $ref: '#/components/schemas/FoodSearchCriteria'
+        totalHits:
+          type: integer
+          description: Total number of food items matching the query
+        currentPage:
+          type: integer
+          description: Current page number
+        totalPages:
+          type: integer
+          description: Total number of pages available
+        foods:
+          type: array
+          description: List of foods matching the search criteria
+          items:
+            $ref: '#/components/schemas/SearchResultFood'
+
+paths:
+  /v1/food/{fdcId}:
+    get:
+      summary: Fetches details for one food item by FDC ID
+      operationId: getFood
+      parameters:
+        - name: fdcId
+          in: path
+          required: true
+          description: FDC ID of the food to fetch
+          schema:
+            type: integer
+        - name: format
+          in: query
+          required: false
+          description: Response format — abridged (default) returns a limited set of fields; full returns all available data
+          schema:
+            type: string
+            enum:
+              - abridged
+              - full
+        - name: nutrients
+          in: query
+          required: false
+          description: List of up to 25 nutrient IDs to limit nutrients returned
+          explode: true
+          schema:
+            type: array
+            maxItems: 25
+            items:
+              type: integer
+      responses:
+        '200':
+          description: A single food item
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/AbridgedFoodItem'
+                  - $ref: '#/components/schemas/BrandedFoodItem'
+                  - $ref: '#/components/schemas/FoundationFoodItem'
+                  - $ref: '#/components/schemas/SRLegacyFoodItem'
+                  - $ref: '#/components/schemas/SurveyFoodItem'
+        '400':
+          description: Bad request
+        '404':
+          description: Food not found
+
+  /v1/foods:
+    get:
+      summary: Fetches details for multiple foods by a list of FDC IDs
+      operationId: getFoodsGet
+      parameters:
+        - name: fdcIds
+          in: query
+          required: true
+          description: List of up to 20 FDC IDs
+          explode: true
+          schema:
+            type: array
+            maxItems: 20
+            items:
+              type: integer
+        - name: format
+          in: query
+          required: false
+          description: Response format — abridged or full
+          schema:
+            type: string
+            enum:
+              - abridged
+              - full
+        - name: nutrients
+          in: query
+          required: false
+          description: List of up to 25 nutrient IDs to limit nutrients returned
+          explode: true
+          schema:
+            type: array
+            maxItems: 25
+            items:
+              type: integer
+      responses:
+        '200':
+          description: List of food items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  oneOf:
+                    - $ref: '#/components/schemas/AbridgedFoodItem'
+                    - $ref: '#/components/schemas/BrandedFoodItem'
+                    - $ref: '#/components/schemas/FoundationFoodItem'
+                    - $ref: '#/components/schemas/SRLegacyFoodItem'
+                    - $ref: '#/components/schemas/SurveyFoodItem'
+        '400':
+          description: Bad request
+
+    post:
+      summary: Fetches details for multiple foods by a list of FDC IDs (POST)
+      operationId: getFoodsPost
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FoodsCriteria'
+      responses:
+        '200':
+          description: List of food items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  oneOf:
+                    - $ref: '#/components/schemas/AbridgedFoodItem'
+                    - $ref: '#/components/schemas/BrandedFoodItem'
+                    - $ref: '#/components/schemas/FoundationFoodItem'
+                    - $ref: '#/components/schemas/SRLegacyFoodItem'
+                    - $ref: '#/components/schemas/SurveyFoodItem'
+        '400':
+          description: Bad request
+
+  /v1/foods/list:
+    get:
+      summary: Returns a paged list of foods in abridged format
+      operationId: getFoodsListGet
+      parameters:
+        - name: dataType
+          in: query
+          required: false
+          description: Filter by data type
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - Branded
+                - Foundation
+                - Survey (FNDDS)
+                - SR Legacy
+        - name: pageSize
+          in: query
+          required: false
+          description: Number of results per page (max 200)
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 200
+        - name: pageNumber
+          in: query
+          required: false
+          description: Page number to retrieve (1-based)
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: sortBy
+          in: query
+          required: false
+          description: Field to sort by
+          schema:
+            type: string
+            enum:
+              - dataType.keyword
+              - lowercaseDescription.keyword
+              - fdcId
+              - publishedDate
+        - name: sortOrder
+          in: query
+          required: false
+          description: Sort direction
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+      responses:
+        '200':
+          description: Paged list of foods in abridged format
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AbridgedFoodItem'
+        '400':
+          description: Bad request
+
+    post:
+      summary: Returns a paged list of foods in abridged format (POST)
+      operationId: getFoodsListPost
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FoodListCriteria'
+      responses:
+        '200':
+          description: Paged list of foods in abridged format
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AbridgedFoodItem'
+        '400':
+          description: Bad request
+
+  /v1/foods/search:
+    get:
+      summary: Returns a list of foods matching a search query
+      operationId: getFoodsSearchGet
+      parameters:
+        - name: query
+          in: query
+          required: true
+          description: Search terms to match against food descriptions, ingredients, etc.
+          schema:
+            type: string
+        - name: dataType
+          in: query
+          required: false
+          description: Filter by data type
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - Branded
+                - Foundation
+                - Survey (FNDDS)
+                - SR Legacy
+        - name: pageSize
+          in: query
+          required: false
+          description: Number of results per page (max 200)
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 200
+        - name: pageNumber
+          in: query
+          required: false
+          description: Page number to retrieve (1-based)
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: sortBy
+          in: query
+          required: false
+          description: Field to sort by
+          schema:
+            type: string
+            enum:
+              - dataType.keyword
+              - lowercaseDescription.keyword
+              - fdcId
+              - publishedDate
+        - name: sortOrder
+          in: query
+          required: false
+          description: Sort direction
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+        - name: brandOwner
+          in: query
+          required: false
+          description: Filter Branded foods by brand owner
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResult'
+        '400':
+          description: Bad request
+
+    post:
+      summary: Returns a list of foods matching a search query (POST)
+      operationId: getFoodsSearchPost
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FoodSearchCriteria'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResult'
+        '400':
+          description: Bad request
+
+  /v1/json-spec:
+    get:
+      summary: Returns this OpenAPI specification in JSON format
+      operationId: getJsonSpec
+      security: []
+      responses:
+        '200':
+          description: OpenAPI specification in JSON format
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /v1/yaml-spec:
+    get:
+      summary: Returns this OpenAPI specification in YAML format
+      operationId: getYamlSpec
+      security: []
+      responses:
+        '200':
+          description: OpenAPI specification in YAML format
+          content:
+            text/x-yaml:
+              schema:
+                type: string
