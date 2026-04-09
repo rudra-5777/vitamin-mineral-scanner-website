@@ -122,7 +122,7 @@ const RIPENESS_DATA: Record<string, RipenessData> = {
     stage: 'Ripe',
     confidence: 85,
     color: 'text-green-400',
-    emoji: '🍑',
+    emoji: '🥗',
     tips: [
       'Appears fresh and ready to consume.',
       'Store appropriately based on the specific produce type.',

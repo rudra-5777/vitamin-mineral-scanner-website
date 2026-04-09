@@ -199,8 +199,13 @@ export default function ScannerDemo() {
 
   const commitFoodEdit = (name: string) => {
     const trimmed = name.trim()
-    if (trimmed) setResult(buildResult(trimmed))
-    setEditingFood(false)
+    if (trimmed) {
+      setResult(buildResult(trimmed))
+      setEditingFood(false)
+    } else {
+      // Revert to the previously confirmed food name on empty input
+      setEditInput(result?.food ?? '')
+    }
   }
 
   const processFile = useCallback((file: File) => {
