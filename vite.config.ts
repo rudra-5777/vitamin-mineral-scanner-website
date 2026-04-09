@@ -10,6 +10,7 @@ export default defineConfig({
         manualChunks: {
           'tf-core': ['@tensorflow/tfjs'],
           'mobilenet': ['@tensorflow-models/mobilenet'],
+          'knn-classifier': ['@tensorflow-models/knn-classifier'],
         },
       },
     },
