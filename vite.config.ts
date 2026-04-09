@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  base: '/vitamin-mineral-scanner-website/',
   build: {
     chunkSizeWarningLimit: 1300,
     rollupOptions: {
