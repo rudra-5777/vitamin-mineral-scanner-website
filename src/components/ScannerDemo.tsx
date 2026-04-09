@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react'
+import { identifyFood, normalizeFood } from '../services/aiService'
 
 interface NutrientResult {
   name: string
@@ -10,14 +11,162 @@ interface NutrientResult {
 
 interface ScanResult {
   food: string
+  emoji: string
   calories: number
   servingSize: string
   nutrients: NutrientResult[]
 }
 
-const MOCK_RESULTS: Record<string, ScanResult> = {
+const FOOD_EMOJI: Record<string, string> = {
+  apple: '🍎',
+  banana: '🍌',
+  orange: '🍊',
+  broccoli: '🥦',
+  carrot: '🥕',
+  tomato: '🍅',
+  strawberry: '🍓',
+  grape: '🍇',
+  mango: '🥭',
+  pineapple: '🍍',
+  spinach: '🥬',
+  avocado: '🥑',
+  blueberry: '🫐',
+  lemon: '🍋',
+  peach: '🍑',
+  pear: '🍐',
+  watermelon: '🍉',
+  kiwi: '🥝',
+  cherry: '🍒',
+  potato: '🥔',
+  default: '🥗',
+}
+
+type FoodData = Omit<ScanResult, 'food' | 'emoji'>
+
+const FOOD_NUTRIENTS: Record<string, FoodData> = {
+  apple: {
+    calories: 52,
+    servingSize: '100g',
+    nutrients: [
+      { name: 'Vitamin C', amount: '4.6', unit: 'mg', dv: 5, color: 'bg-orange-400' },
+      { name: 'Vitamin K', amount: '2.2', unit: 'mcg', dv: 2, color: 'bg-green-400' },
+      { name: 'Potassium', amount: '107', unit: 'mg', dv: 2, color: 'bg-purple-400' },
+      { name: 'Dietary Fiber', amount: '2.4', unit: 'g', dv: 9, color: 'bg-yellow-400' },
+      { name: 'Iron', amount: '0.1', unit: 'mg', dv: 1, color: 'bg-red-400' },
+      { name: 'Calcium', amount: '6', unit: 'mg', dv: 1, color: 'bg-cyan-400' },
+    ],
+  },
+  banana: {
+    calories: 89,
+    servingSize: '100g',
+    nutrients: [
+      { name: 'Vitamin B6', amount: '0.4', unit: 'mg', dv: 23, color: 'bg-yellow-400' },
+      { name: 'Vitamin C', amount: '8.7', unit: 'mg', dv: 10, color: 'bg-orange-400' },
+      { name: 'Potassium', amount: '358', unit: 'mg', dv: 8, color: 'bg-purple-400' },
+      { name: 'Magnesium', amount: '27', unit: 'mg', dv: 6, color: 'bg-teal-400' },
+      { name: 'Dietary Fiber', amount: '2.6', unit: 'g', dv: 10, color: 'bg-green-400' },
+      { name: 'Iron', amount: '0.3', unit: 'mg', dv: 2, color: 'bg-red-400' },
+    ],
+  },
+  orange: {
+    calories: 47,
+    servingSize: '100g',
+    nutrients: [
+      { name: 'Vitamin C', amount: '53', unit: 'mg', dv: 59, color: 'bg-orange-400' },
+      { name: 'Folate', amount: '30', unit: 'mcg', dv: 8, color: 'bg-blue-400' },
+      { name: 'Potassium', amount: '181', unit: 'mg', dv: 4, color: 'bg-purple-400' },
+      { name: 'Calcium', amount: '40', unit: 'mg', dv: 3, color: 'bg-cyan-400' },
+      { name: 'Vitamin A', amount: '11', unit: 'mcg', dv: 1, color: 'bg-yellow-400' },
+      { name: 'Dietary Fiber', amount: '2.4', unit: 'g', dv: 9, color: 'bg-green-400' },
+    ],
+  },
+  broccoli: {
+    calories: 34,
+    servingSize: '100g',
+    nutrients: [
+      { name: 'Vitamin C', amount: '89', unit: 'mg', dv: 99, color: 'bg-orange-400' },
+      { name: 'Vitamin K', amount: '102', unit: 'mcg', dv: 85, color: 'bg-green-400' },
+      { name: 'Folate', amount: '63', unit: 'mcg', dv: 16, color: 'bg-blue-400' },
+      { name: 'Vitamin A', amount: '31', unit: 'mcg', dv: 3, color: 'bg-yellow-400' },
+      { name: 'Potassium', amount: '316', unit: 'mg', dv: 7, color: 'bg-purple-400' },
+      { name: 'Calcium', amount: '47', unit: 'mg', dv: 4, color: 'bg-cyan-400' },
+      { name: 'Iron', amount: '0.7', unit: 'mg', dv: 4, color: 'bg-red-400' },
+    ],
+  },
+  carrot: {
+    calories: 41,
+    servingSize: '100g',
+    nutrients: [
+      { name: 'Vitamin A', amount: '835', unit: 'mcg', dv: 93, color: 'bg-yellow-400' },
+      { name: 'Vitamin K', amount: '13', unit: 'mcg', dv: 11, color: 'bg-green-400' },
+      { name: 'Vitamin C', amount: '5.9', unit: 'mg', dv: 7, color: 'bg-orange-400' },
+      { name: 'Potassium', amount: '320', unit: 'mg', dv: 7, color: 'bg-purple-400' },
+      { name: 'Dietary Fiber', amount: '2.8', unit: 'g', dv: 10, color: 'bg-blue-400' },
+      { name: 'Calcium', amount: '33', unit: 'mg', dv: 3, color: 'bg-cyan-400' },
+    ],
+  },
+  spinach: {
+    calories: 23,
+    servingSize: '100g',
+    nutrients: [
+      { name: 'Vitamin K', amount: '483', unit: 'mcg', dv: 100, color: 'bg-green-400' },
+      { name: 'Vitamin A', amount: '469', unit: 'mcg', dv: 52, color: 'bg-yellow-400' },
+      { name: 'Folate', amount: '194', unit: 'mcg', dv: 49, color: 'bg-blue-400' },
+      { name: 'Vitamin C', amount: '28', unit: 'mg', dv: 31, color: 'bg-orange-400' },
+      { name: 'Iron', amount: '2.7', unit: 'mg', dv: 15, color: 'bg-red-400' },
+      { name: 'Calcium', amount: '99', unit: 'mg', dv: 8, color: 'bg-cyan-400' },
+      { name: 'Magnesium', amount: '79', unit: 'mg', dv: 19, color: 'bg-teal-400' },
+    ],
+  },
+  avocado: {
+    calories: 160,
+    servingSize: '100g',
+    nutrients: [
+      { name: 'Vitamin K', amount: '21', unit: 'mcg', dv: 18, color: 'bg-green-400' },
+      { name: 'Folate', amount: '81', unit: 'mcg', dv: 20, color: 'bg-blue-400' },
+      { name: 'Vitamin C', amount: '10', unit: 'mg', dv: 11, color: 'bg-orange-400' },
+      { name: 'Potassium', amount: '485', unit: 'mg', dv: 10, color: 'bg-purple-400' },
+      { name: 'Magnesium', amount: '29', unit: 'mg', dv: 7, color: 'bg-teal-400' },
+      { name: 'Vitamin E', amount: '2.1', unit: 'mg', dv: 14, color: 'bg-yellow-400' },
+    ],
+  },
+  mango: {
+    calories: 60,
+    servingSize: '100g',
+    nutrients: [
+      { name: 'Vitamin C', amount: '36', unit: 'mg', dv: 40, color: 'bg-orange-400' },
+      { name: 'Vitamin A', amount: '54', unit: 'mcg', dv: 6, color: 'bg-yellow-400' },
+      { name: 'Folate', amount: '43', unit: 'mcg', dv: 11, color: 'bg-blue-400' },
+      { name: 'Potassium', amount: '168', unit: 'mg', dv: 4, color: 'bg-purple-400' },
+      { name: 'Vitamin B6', amount: '0.1', unit: 'mg', dv: 8, color: 'bg-teal-400' },
+      { name: 'Dietary Fiber', amount: '1.6', unit: 'g', dv: 6, color: 'bg-green-400' },
+    ],
+  },
+  tomato: {
+    calories: 18,
+    servingSize: '100g',
+    nutrients: [
+      { name: 'Vitamin C', amount: '14', unit: 'mg', dv: 15, color: 'bg-orange-400' },
+      { name: 'Vitamin K', amount: '7.9', unit: 'mcg', dv: 7, color: 'bg-green-400' },
+      { name: 'Vitamin A', amount: '42', unit: 'mcg', dv: 5, color: 'bg-yellow-400' },
+      { name: 'Potassium', amount: '237', unit: 'mg', dv: 5, color: 'bg-purple-400' },
+      { name: 'Folate', amount: '15', unit: 'mcg', dv: 4, color: 'bg-blue-400' },
+      { name: 'Lycopene', amount: '2573', unit: 'mcg', dv: 99, color: 'bg-red-400' },
+    ],
+  },
+  strawberry: {
+    calories: 32,
+    servingSize: '100g',
+    nutrients: [
+      { name: 'Vitamin C', amount: '59', unit: 'mg', dv: 65, color: 'bg-orange-400' },
+      { name: 'Folate', amount: '24', unit: 'mcg', dv: 6, color: 'bg-blue-400' },
+      { name: 'Potassium', amount: '153', unit: 'mg', dv: 3, color: 'bg-purple-400' },
+      { name: 'Manganese', amount: '0.4', unit: 'mg', dv: 16, color: 'bg-yellow-400' },
+      { name: 'Dietary Fiber', amount: '2', unit: 'g', dv: 7, color: 'bg-green-400' },
+      { name: 'Calcium', amount: '16', unit: 'mg', dv: 1, color: 'bg-cyan-400' },
+    ],
+  },
   default: {
-    food: 'Mixed Vegetables',
     calories: 85,
     servingSize: '100g',
     nutrients: [
@@ -33,24 +182,42 @@ const MOCK_RESULTS: Record<string, ScanResult> = {
   },
 }
 
+function buildResult(name: string): ScanResult {
+  const key = normalizeFood(name)
+  const data = FOOD_NUTRIENTS[key] ?? FOOD_NUTRIENTS.default
+  return { food: name, emoji: FOOD_EMOJI[key] ?? FOOD_EMOJI.default, ...data }
+}
+
 export default function ScannerDemo() {
   const [dragging, setDragging] = useState(false)
   const [image, setImage] = useState<string | null>(null)
   const [scanning, setScanning] = useState(false)
   const [result, setResult] = useState<ScanResult | null>(null)
+  const [editingFood, setEditingFood] = useState(false)
+  const [editInput, setEditInput] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const commitFoodEdit = (name: string) => {
+    const trimmed = name.trim()
+    if (trimmed) setResult(buildResult(trimmed))
+    setEditingFood(false)
+  }
 
   const processFile = useCallback((file: File) => {
     if (!file.type.startsWith('image/')) return
     const reader = new FileReader()
-    reader.onload = (e) => {
-      setImage(e.target?.result as string)
+    reader.onload = async (e) => {
+      const dataUrl = e.target?.result as string
+      setImage(dataUrl)
       setResult(null)
+      setEditingFood(false)
       setScanning(true)
-      setTimeout(() => {
+      try {
+        const name = await identifyFood(dataUrl)
+        setResult(buildResult(name))
+      } finally {
         setScanning(false)
-        setResult(MOCK_RESULTS.default)
-      }, 2200)
+      }
     }
     reader.readAsDataURL(file)
   }, [])
@@ -74,6 +241,7 @@ export default function ScannerDemo() {
     setImage(null)
     setResult(null)
     setScanning(false)
+    setEditingFood(false)
     if (inputRef.current) inputRef.current.value = ''
   }
 
@@ -127,7 +295,7 @@ export default function ScannerDemo() {
                 {scanning && (
                   <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center gap-4">
                     <div className="w-12 h-12 rounded-full border-4 border-green-400 border-t-transparent animate-spin" />
-                    <span className="text-green-400 font-medium text-sm animate-pulse">Analyzing nutrients…</span>
+                    <span className="text-green-400 font-medium text-sm animate-pulse">Analysing…</span>
                   </div>
                 )}
                 {!scanning && result && (
@@ -182,11 +350,32 @@ export default function ScannerDemo() {
             {result && (
               <div className="flex-1 flex flex-col gap-4">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-bold text-lg">{result.food}</h3>
-                    <p className="text-gray-500 text-sm">Per {result.servingSize} · {result.calories} kcal</p>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="text-3xl shrink-0">{result.emoji}</span>
+                    <div className="min-w-0">
+                      {editingFood ? (
+                        <input
+                          autoFocus
+                          type="text"
+                          value={editInput}
+                          onChange={(e) => setEditInput(e.target.value)}
+                          onBlur={() => commitFoodEdit(editInput)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') commitFoodEdit(editInput) }}
+                          className="bg-transparent border-b border-green-400 font-bold text-lg focus:outline-none w-full text-white"
+                        />
+                      ) : (
+                        <button
+                          onClick={() => { setEditInput(result.food); setEditingFood(true) }}
+                          title="Click to correct the detected food"
+                          className="font-bold text-lg hover:text-green-400 transition-colors text-left truncate max-w-[180px] block"
+                        >
+                          {result.food}
+                        </button>
+                      )}
+                      <p className="text-gray-500 text-sm">Per {result.servingSize} · {result.calories} kcal</p>
+                    </div>
                   </div>
-                  <span className="px-3 py-1 bg-green-500/10 text-green-400 text-xs font-semibold rounded-full border border-green-500/20">
+                  <span className="px-3 py-1 bg-green-500/10 text-green-400 text-xs font-semibold rounded-full border border-green-500/20 shrink-0">
                     {result.nutrients.length} nutrients
                   </span>
                 </div>

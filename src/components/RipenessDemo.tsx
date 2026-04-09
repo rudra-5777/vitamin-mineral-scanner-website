@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react'
+import { identifyFood, normalizeFood } from '../services/aiService'
 
 interface RipenessResult {
   food: string
@@ -10,19 +11,132 @@ interface RipenessResult {
   bestBefore: string
 }
 
-const RIPENESS_MOCK: RipenessResult = {
-  food: 'Banana',
-  stage: 'Ripe',
-  confidence: 94,
-  color: 'text-green-400',
-  emoji: '🍌',
-  tips: [
-    'Best time to eat – sweetness and nutrients are at their peak.',
-    'Store at room temperature away from direct sunlight.',
-    'Ideal for smoothies, fruit salads, or eating fresh.',
-    'Will start browning within 1–2 days.',
-  ],
-  bestBefore: '1–2 days',
+type RipenessData = Omit<RipenessResult, 'food'>
+
+const RIPENESS_DATA: Record<string, RipenessData> = {
+  banana: {
+    stage: 'Ripe',
+    confidence: 94,
+    color: 'text-green-400',
+    emoji: '🍌',
+    tips: [
+      'Best time to eat – sweetness and nutrients are at their peak.',
+      'Store at room temperature away from direct sunlight.',
+      'Ideal for smoothies, fruit salads, or eating fresh.',
+      'Will start browning within 1–2 days.',
+    ],
+    bestBefore: '1–2 days',
+  },
+  apple: {
+    stage: 'Ripe',
+    confidence: 91,
+    color: 'text-green-400',
+    emoji: '🍎',
+    tips: [
+      'Crisp and sweet – perfect for fresh eating or baking.',
+      'Refrigerate to extend shelf life up to 4–6 weeks.',
+      'Keep away from ethylene-sensitive produce.',
+      'Ideal for pies, juices, and snacking.',
+    ],
+    bestBefore: '2–4 weeks (refrigerated)',
+  },
+  mango: {
+    stage: 'Nearly Ripe',
+    confidence: 88,
+    color: 'text-yellow-400',
+    emoji: '🥭',
+    tips: [
+      'Leave at room temperature for 1–2 days until fully ripe.',
+      'Flesh should yield slightly to gentle pressure when ripe.',
+      'Refrigerate once ripe to extend freshness by 5 days.',
+      'Sweet aroma near the stem indicates ripeness.',
+    ],
+    bestBefore: '1–2 days to ripen, then 5 days refrigerated',
+  },
+  strawberry: {
+    stage: 'Ripe',
+    confidence: 96,
+    color: 'text-green-400',
+    emoji: '🍓',
+    tips: [
+      'Fully red with a fresh strawberry scent – eat soon.',
+      'Refrigerate immediately; they deteriorate quickly.',
+      'Best consumed within 1–3 days of purchase.',
+      'Do not wash until ready to eat to prevent mould.',
+    ],
+    bestBefore: '1–3 days',
+  },
+  avocado: {
+    stage: 'Nearly Ripe',
+    confidence: 89,
+    color: 'text-yellow-400',
+    emoji: '🥑',
+    tips: [
+      'Leave at room temperature for 1–2 days to finish ripening.',
+      'Ripe when skin darkens and fruit yields to gentle pressure.',
+      'Speed ripening by placing next to a banana.',
+      'Refrigerate once ripe to extend shelf life.',
+    ],
+    bestBefore: '1–2 days to ripen',
+  },
+  tomato: {
+    stage: 'Ripe',
+    confidence: 92,
+    color: 'text-green-400',
+    emoji: '🍅',
+    tips: [
+      'Best flavour at room temperature – avoid refrigerating.',
+      'Use within 3–5 days for optimal taste.',
+      'Store stem-side down to prolong freshness.',
+      'Great for salads, sauces, and cooking.',
+    ],
+    bestBefore: '3–5 days',
+  },
+  orange: {
+    stage: 'Ripe',
+    confidence: 93,
+    color: 'text-green-400',
+    emoji: '🍊',
+    tips: [
+      'Firm, heavy, and fragrant – ready to eat.',
+      'Store at room temperature for 1 week, or refrigerate for up to 3 weeks.',
+      'Rich in Vitamin C – best consumed fresh.',
+      'Can be juiced immediately for maximum nutrients.',
+    ],
+    bestBefore: '1 week (room temp) or 3 weeks (refrigerated)',
+  },
+  peach: {
+    stage: 'Nearly Ripe',
+    confidence: 87,
+    color: 'text-yellow-400',
+    emoji: '🍑',
+    tips: [
+      'Leave on the counter for 1–2 days to soften fully.',
+      'A ripe peach will yield to gentle pressure and smell fragrant.',
+      'Refrigerate once ripe; consume within 3–5 days.',
+      'Avoid storing near other strongly scented produce.',
+    ],
+    bestBefore: '1–2 days to ripen, then 3–5 days refrigerated',
+  },
+  default: {
+    stage: 'Ripe',
+    confidence: 85,
+    color: 'text-green-400',
+    emoji: '🍑',
+    tips: [
+      'Appears fresh and ready to consume.',
+      'Store appropriately based on the specific produce type.',
+      'Consume within 2–3 days for best nutritional value.',
+      'Refrigerate if not consuming immediately.',
+    ],
+    bestBefore: '2–3 days',
+  },
+}
+
+function buildRipenessResult(name: string): RipenessResult {
+  const key = normalizeFood(name)
+  const data = RIPENESS_DATA[key] ?? RIPENESS_DATA.default
+  return { food: name, ...data }
 }
 
 const STAGE_COLORS: Record<string, string> = {
@@ -44,14 +158,17 @@ export default function RipenessDemo() {
   const processFile = useCallback((file: File) => {
     if (!file.type.startsWith('image/')) return
     const reader = new FileReader()
-    reader.onload = (e) => {
-      setImage(e.target?.result as string)
+    reader.onload = async (e) => {
+      const dataUrl = e.target?.result as string
+      setImage(dataUrl)
       setResult(null)
       setScanning(true)
-      setTimeout(() => {
+      try {
+        const name = await identifyFood(dataUrl)
+        setResult(buildRipenessResult(name))
+      } finally {
         setScanning(false)
-        setResult(RIPENESS_MOCK)
-      }, 2000)
+      }
     }
     reader.readAsDataURL(file)
   }, [])
